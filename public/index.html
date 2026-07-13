@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Customer churn prediction API powered by FastAPI, MLflow, and XGBoost."
+    />
+    <title>Customer Churn Prediction API</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap");
+
+      :root {
+        color-scheme: dark;
+        --ink: #e9e7df;
+        --muted: #9b9a93;
+        --paper: #151714;
+        --panel: #1d201c;
+        --line: #383c35;
+        --acid: #c9f27b;
+        --orange: #df8b5a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          var(--paper);
+        background-size: 42px 42px;
+        color: var(--ink);
+        font-family: "DM Mono", monospace;
+      }
+
+      body::before {
+        position: fixed;
+        z-index: -1;
+        top: -18rem;
+        right: -12rem;
+        width: 42rem;
+        height: 42rem;
+        border: 1px solid rgba(201, 242, 123, 0.22);
+        border-radius: 50%;
+        content: "";
+        box-shadow:
+          0 0 0 7rem rgba(201, 242, 123, 0.025),
+          0 0 0 14rem rgba(201, 242, 123, 0.018);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 90px;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.72rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--acid);
+        border-radius: 50%;
+        color: var(--acid);
+      }
+
+      .nav-meta {
+        color: var(--muted);
+      }
+
+      main {
+        padding: 86px 0 54px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.7fr);
+        gap: 74px;
+        align-items: end;
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 24px;
+        color: var(--acid);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 36px;
+        height: 1px;
+        background: currentColor;
+        content: "";
+      }
+
+      h1 {
+        max-width: 800px;
+        margin: 0;
+        font-family: "Instrument Serif", serif;
+        font-size: clamp(4.25rem, 9vw, 8.8rem);
+        font-weight: 400;
+        letter-spacing: -0.055em;
+        line-height: 0.83;
+      }
+
+      h1 em {
+        color: var(--orange);
+        font-weight: 400;
+      }
+
+      .intro {
+        max-width: 650px;
+        margin: 40px 0 0;
+        color: var(--muted);
+        font-size: clamp(0.88rem, 1.5vw, 1rem);
+        line-height: 1.9;
+      }
+
+      .status-card {
+        position: relative;
+        padding: 28px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: rgba(29, 32, 28, 0.78);
+        backdrop-filter: blur(16px);
+      }
+
+      .status-card::after {
+        position: absolute;
+        right: -35px;
+        bottom: -35px;
+        width: 100px;
+        height: 100px;
+        border: 1px solid rgba(223, 139, 90, 0.35);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .status-title {
+        margin: 0 0 34px;
+        color: var(--muted);
+        font-size: 0.68rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 34px;
+        font-family: "Instrument Serif", serif;
+        font-size: 2rem;
+      }
+
+      .pulse {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--acid);
+        box-shadow: 0 0 0 0 rgba(201, 242, 123, 0.5);
+        animation: pulse 2s infinite;
+      }
+
+      .facts {
+        display: grid;
+        gap: 14px;
+        margin: 0;
+      }
+
+      .fact {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+        font-size: 0.72rem;
+      }
+
+      .fact dt {
+        color: var(--muted);
+      }
+
+      .fact dd {
+        margin: 0;
+        text-align: right;
+      }
+
+      .details {
+        display: grid;
+        grid-template-columns: 0.7fr 1.3fr;
+        gap: 74px;
+        margin-top: 110px;
+        padding-top: 34px;
+        border-top: 1px solid var(--line);
+      }
+
+      .predictor {
+        margin-top: 110px;
+        padding: 36px;
+        border: 1px solid var(--line);
+        background: rgba(29, 32, 28, 0.88);
+      }
+
+      .predictor-head {
+        display: grid;
+        grid-template-columns: 0.75fr 1.25fr;
+        gap: 74px;
+        align-items: end;
+        margin-bottom: 38px;
+      }
+
+      .predictor h2 {
+        max-width: 680px;
+        margin: 0;
+        font-family: "Instrument Serif", serif;
+        font-size: clamp(2.6rem, 5vw, 4.7rem);
+        font-weight: 400;
+        letter-spacing: -0.035em;
+        line-height: 0.95;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 22px 16px;
+      }
+
+      label {
+        display: grid;
+        gap: 9px;
+        color: var(--muted);
+        font-size: 0.67rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 48px;
+        padding: 0 13px;
+        border: 1px solid var(--line);
+        border-radius: 0;
+        outline: none;
+        background: var(--paper);
+        color: var(--ink);
+        font: 0.85rem "DM Mono", monospace;
+        transition: border-color 160ms, background 160ms;
+      }
+
+      input:focus,
+      select:focus {
+        border-color: var(--acid);
+        background: #191c17;
+      }
+
+      .predict-actions {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 16px;
+        align-items: stretch;
+        margin-top: 28px;
+      }
+
+      button {
+        min-height: 76px;
+        padding: 0 26px;
+        border: 0;
+        background: var(--acid);
+        color: #1a1d17;
+        cursor: pointer;
+        font: 500 0.76rem "DM Mono", monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        transition: transform 160ms, background 160ms;
+      }
+
+      button:hover {
+        background: #dafb9b;
+        transform: translateY(-2px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+        transform: none;
+      }
+
+      .result {
+        display: grid;
+        min-height: 76px;
+        padding: 15px 20px;
+        align-content: center;
+        border: 1px solid var(--line);
+      }
+
+      .result-label {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 0.64rem;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .result-value {
+        margin: 0;
+        font-family: "Instrument Serif", serif;
+        font-size: 1.75rem;
+      }
+
+      .result[data-state="risk"] {
+        border-color: rgba(223, 139, 90, 0.72);
+        color: var(--orange);
+      }
+
+      .result[data-state="safe"] {
+        border-color: rgba(201, 242, 123, 0.6);
+        color: var(--acid);
+      }
+
+      .result[data-state="error"] {
+        border-color: #d16e6e;
+        color: #e8a0a0;
+      }
+
+      .section-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.7rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .endpoint {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 18px;
+        align-items: start;
+        padding: 24px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .method {
+        min-width: 58px;
+        padding: 6px 8px;
+        border: 1px solid rgba(201, 242, 123, 0.45);
+        color: var(--acid);
+        font-size: 0.68rem;
+        text-align: center;
+      }
+
+      .method.post {
+        border-color: rgba(223, 139, 90, 0.5);
+        color: var(--orange);
+      }
+
+      .endpoint code {
+        display: block;
+        margin-bottom: 9px;
+        font-family: inherit;
+        font-size: 1rem;
+      }
+
+      .endpoint p,
+      .runtime-note p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.76rem;
+        line-height: 1.75;
+      }
+
+      .runtime-note {
+        grid-column: 2;
+        margin-top: 28px;
+        padding: 24px;
+        border-left: 2px solid var(--orange);
+        background: rgba(223, 139, 90, 0.06);
+      }
+
+      .runtime-note strong {
+        display: block;
+        margin-bottom: 10px;
+        font-family: "Instrument Serif", serif;
+        font-size: 1.35rem;
+        font-weight: 400;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 28px 0 36px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.65rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      @keyframes pulse {
+        70% {
+          box-shadow: 0 0 0 10px rgba(201, 242, 123, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(201, 242, 123, 0);
+        }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .hero > *, .details > * {
+          animation: reveal 700ms both;
+        }
+
+        .hero > :nth-child(2), .details > :nth-child(2) {
+          animation-delay: 130ms;
+        }
+
+        @keyframes reveal {
+          from {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      }
+
+      @media (max-width: 760px) {
+        .shell {
+          width: min(100% - 28px, 1180px);
+        }
+
+        nav {
+          min-height: 72px;
+        }
+
+        .nav-meta {
+          display: none;
+        }
+
+        main {
+          padding-top: 58px;
+        }
+
+        .hero, .details, .predictor-head {
+          grid-template-columns: 1fr;
+          gap: 50px;
+        }
+
+        h1 {
+          font-size: clamp(3.7rem, 20vw, 6rem);
+        }
+
+        .details {
+          margin-top: 76px;
+        }
+
+        .predictor {
+          margin-top: 76px;
+          padding: 24px 18px;
+        }
+
+        .predictor-head {
+          gap: 18px;
+        }
+
+        .form-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .predict-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .runtime-note {
+          grid-column: 1;
+        }
+
+        footer {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <nav aria-label="Primary navigation">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true">C</span>
+          <span>Churn Signal</span>
+        </a>
+        <span class="nav-meta">Logistic model / MLflow / Netlify</span>
+      </nav>
+
+      <main>
+        <section class="hero" aria-labelledby="page-title">
+          <div>
+            <p class="eyebrow">Customer retention intelligence</p>
+            <h1 id="page-title">See the exit <em>before</em> it happens.</h1>
+            <p class="intro">
+              A machine-learning service that evaluates customer behavior and returns a clear churn prediction using the parameters stored in the registered MLflow model.
+            </p>
+          </div>
+
+          <aside class="status-card" aria-label="Deployment information">
+            <p class="status-title">Deployment status</p>
+            <div class="status"><span class="pulse" aria-hidden="true"></span> Site online</div>
+            <dl class="facts">
+              <div class="fact"><dt>Model</dt><dd>Logistic regression</dd></div>
+              <div class="fact"><dt>Registry</dt><dd>MLflow</dd></div>
+              <div class="fact"><dt>Runtime</dt><dd>Netlify Function</dd></div>
+              <div class="fact"><dt>Python</dt><dd>3.11.6</dd></div>
+            </dl>
+          </aside>
+        </section>
+
+        <section class="predictor" aria-labelledby="predict-title">
+          <div class="predictor-head">
+            <p class="section-label">Live model / enter customer data</p>
+            <h2 id="predict-title">Calculate the churn signal.</h2>
+          </div>
+
+          <form id="prediction-form">
+            <div class="form-grid">
+              <label>Age<input name="age" type="number" min="18" max="100" value="30" required /></label>
+              <label>Gender<select name="gender"><option value="0">Female</option><option value="1">Male</option></select></label>
+              <label>Tenure<input name="tenure" type="number" min="0" max="120" value="39" required /></label>
+              <label>Usage frequency<input name="usageFrequency" type="number" min="0" max="100" value="14" required /></label>
+              <label>Support calls<input name="supportCalls" type="number" min="0" max="100" value="5" required /></label>
+              <label>Payment delay<input name="paymentDelay" type="number" min="0" max="365" value="18" required /></label>
+              <label>Subscription<select name="subscriptionType"><option value="0">Basic</option><option value="1">Premium</option><option value="2" selected>Standard</option></select></label>
+              <label>Contract<select name="contractLength"><option value="0" selected>Annual</option><option value="1">Monthly</option><option value="2">Quarterly</option></select></label>
+              <label>Total spend<input name="totalSpend" type="number" min="0" max="1000000" step="0.01" value="932" required /></label>
+              <label>Last interaction<input name="lastInteraction" type="number" min="0" max="365" value="17" required /></label>
+            </div>
+
+            <div class="predict-actions">
+              <button type="submit">Run prediction</button>
+              <div class="result" id="prediction-result" role="status" aria-live="polite">
+                <p class="result-label">Model result</p>
+                <p class="result-value">Ready for customer data</p>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section class="details" aria-labelledby="api-label">
+          <p class="section-label" id="api-label">API surface / 02 routes</p>
+          <div>
+            <article class="endpoint">
+              <span class="method">GET</span>
+              <div>
+                <code>/</code>
+                <p>Serves the interactive customer churn prediction interface.</p>
+              </div>
+            </article>
+            <article class="endpoint">
+              <span class="method post">POST</span>
+              <div>
+                <code>/api/predict</code>
+                <p>Accepts customer profile data and returns the predicted churn class.</p>
+              </div>
+            </article>
+          </div>
+
+          <aside class="runtime-note">
+            <strong>About this deployment</strong>
+            <p>
+              The prediction endpoint runs as a Netlify Function and evaluates the exact coefficients and intercept stored in the registered scikit-learn model artifact.
+            </p>
+          </aside>
+        </section>
+      </main>
+
+      <footer>
+        <span>Customer churn prediction</span>
+        <span>Model-backed decision support</span>
+      </footer>
+    </div>
+    <script>
+      const form = document.querySelector("#prediction-form");
+      const result = document.querySelector("#prediction-result");
+      const resultValue = result.querySelector(".result-value");
+      const submitButton = form.querySelector("button[type='submit']");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        if (!form.reportValidity()) return;
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Calculating...";
+        result.dataset.state = "";
+        resultValue.textContent = "Reading customer signal";
+
+        const payload = Object.fromEntries(
+          [...new FormData(form).entries()].map(([key, value]) => [key, Number(value)]),
+        );
+
+        try {
+          const response = await fetch("/api/predict", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+
+          if (!response.ok) throw new Error(data.error || "Prediction failed.");
+
+          const isChurn = data.prediction === 1;
+          result.dataset.state = isChurn ? "risk" : "safe";
+          resultValue.textContent = isChurn
+            ? `${data.probabilityPercent}% churn risk — likely to churn`
+            : `${data.probabilityPercent}% churn risk — likely to stay`;
+        } catch (error) {
+          result.dataset.state = "error";
+          resultValue.textContent = error.message;
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = "Run prediction";
+        }
+      });
+    </script>
+  </body>
+</html>
